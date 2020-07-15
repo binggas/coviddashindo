@@ -4,20 +4,10 @@ library("ggplot2")
 library("tidyr")
 library("plotly")
 
-df <- read.csv("data/kasus_harian.csv")
-
-df$date <- as.Date(df$date, format = "%Y-%m-%d")
-
-miss1 <- is.na(df)
-df[miss1] <- 0
 
 
 
 ma <- function(x, n = 7){stats::filter(x, rep(1 / n, n), sides = 1)}
-
-
-df$death_ma <- ma(df$death)
-df$new_case_ma <- ma(df$new_case)
 
 
 ## BUBBLE PLOT
