@@ -20,15 +20,15 @@ df_pop <- read.csv("data/population_2019.csv")
 
 
 
-# df_prov_latest <- df_prov[df_prov$date >= max(df_prov$date),]
-# 
-# df_prov_latest$cfr <- round(df_prov_latest$death_cumulative / df_prov_latest$case_cumulative * 100,2)
-# 
-# df_prov_v2 <- left_join(df_prov_latest, df_pop, by=c("province"="province")) %>%  filter(province != "Lain")
-# 
-# df_prov_v2$case_rate_100k <- round(df_prov_v2$case_cumulative/df_prov_v2$n_pop * 100000, 2)
-# 
-# cfr_mean <- mean(df_prov_v2$cfr)
+df_prov_latest <- df_prov[df_prov$date >= max(df_prov$date),]
+
+df_prov_latest$cfr <- round(df_prov_latest$death_cumulative / df_prov_latest$case_cumulative * 100,2)
+
+df_prov_v2 <- left_join(df_prov_latest, df_pop, by=c("province"="province")) %>%  filter(province != "Lain")
+
+df_prov_v2$case_rate_100k <- round(df_prov_v2$case_cumulative/df_prov_v2$n_pop * 100000, 2)
+
+cfr_mean <- mean(df_prov_v2$cfr)
   
 
 ## PROVINCE LEVEL
@@ -45,6 +45,11 @@ dfx <- df_prov %>%
 df_death <- df_prov %>% 
   select(date, province, death_cumulative) %>% 
   spread(province, death_cumulative)
+
+
+df_case_total <- df_prov %>% 
+  select(date, province, case_cumulative) %>% 
+  spread(province, case_cumulative)
 
 
 df_case_daily <- dfx %>% 
@@ -83,8 +88,17 @@ ui <- fluidPage(
       )
       , br()
       , textOutput("selected_var")
-      ,br()
-      ,br()
+      , br()
+      , br()
+      # , p("Some info here")
+      , br()
+      , br()
+      , br()
+      , br()
+      , p("Sumber data: Kementerian Kesehatan RI")
+      , p("Source code & raw data:",  a("GitHub", href="https://github.com/binggas/coviddashindo"))
+      , p("Kontak: ", span("baya.inggas@gmail.com", style="color:blue"))
+      
     ),
     
     
@@ -92,14 +106,14 @@ ui <- fluidPage(
        tabsetPanel(
         tabPanel("CFR vs Kasus"
                  , h3("Perbandingan CFR terhadap Total Kasus tiap Provinsi") 
-                 , p("Some text here")
+                 , p("Info: Gerakkan kursor ke titik yang diinginkan untuk mendapatkan detil tiap provinsi")
                  , br()
                  , div( style = "position:relative",
                           plotOutput("plot2", hover = hoverOpts("plot_hover", delay = 250, delayType = "debounce"))
                           , uiOutput("hover_info")))
         ,tabPanel("Tren Provinsi"
                   , h3("Tren Kasus Harian tiap Provinsi dengan Rerata 7 Hari")
-                  , p("Some text here")
+                  # , p("Some text here")
                   , br()
                   , plotOutput("plot5"))
       )
@@ -123,7 +137,10 @@ ui <- fluidPage(
                                       "Maluku", "Maluku Utara", "Papua",  "Papua Barat"),
                           selected = "Indonesia")
       
-             ,br()
+             # , br()
+             , textOutput("total_case_var")
+             , textOutput("total_death_var")
+             , br()
            #  , h3("Kasus Harian")
            #  , br()
            #  , p("Some text here")
@@ -195,6 +212,14 @@ server <- function(input, output) {
       )
   })
   
+  subData6 <- reactive({
+    df_case_total %>%
+      filter(
+        as.Date(date) >= as.Date(input$dates[1]),
+        as.Date(date) <= as.Date(input$dates[2])
+      )
+  })
+  
   
   output$selected_var <- renderText({ 
     paste("Grafik menunjukkan data dari tanggal", format(as.Date(input$dates[1]) , "%d %b"), "hingga", format(as.Date(input$dates[2]) , "%d %b %Y"))
@@ -203,6 +228,12 @@ server <- function(input, output) {
   
   output$plot2 <- renderPlot({
   
+    # df_prov_latest <- subData2()[subData2()$date >= max(subData2()$date),]
+    # df_prov_latest$cfr <- round(df_prov_latest$death_cumulative / df_prov_latest$case_cumulative * 100,2)
+    # df_prov_v2 <- left_join(df_prov_latest, df_pop, by=c("province"="province")) %>%  filter(province != "Lain")
+    # df_prov_v2$case_rate_100k <- round(df_prov_v2$case_cumulative/df_prov_v2$n_pop * 100000, 2)
+    # cfr_mean <- mean(df_prov_v2$cfr)
+    
     df_prov_latest <- subData2()[subData2()$date >= max(subData2()$date),]
     df_prov_latest$cfr <- round(df_prov_latest$death_cumulative / df_prov_latest$case_cumulative * 100,2)
     df_prov_v2 <- left_join(df_prov_latest, df_pop, by=c("province"="province")) %>%  filter(province != "Lain")
@@ -261,7 +292,6 @@ server <- function(input, output) {
   })  
   
   
-  
 
   
   output$plot3 <- renderPlot({
@@ -288,6 +318,22 @@ server <- function(input, output) {
 })
   
 
+  output$total_case_var <- renderText({ 
+   stat1 <- subData6() %>%
+    select(date, .data[[input$province_var]])
+    
+    paste("Angka kasus total: ", tail(stat1[-1], 1))
+  })
+  
+  output$total_death_var <- renderText({
+    stat2 <- subData4() %>%
+      select(date, .data[[input$province_var]])
+    
+    paste("Angka kematian total: ", tail(stat2[-1], 1))
+  })
+  
+  
+  
   output$plot4 <- renderPlot({
     
     req(input$province_var)
